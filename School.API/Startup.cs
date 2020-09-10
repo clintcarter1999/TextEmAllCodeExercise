@@ -18,6 +18,7 @@ using Serilog;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.IO;
+using School.Data.Context;
 
 namespace School.API
 {

@@ -14,7 +14,7 @@ namespace School.Data.Models
 
         public decimal? gpa { get; set; }
 
-        public List<Grade> grades { get; set; }
+        public List<StudentTranscriptGrade> grades { get; set; }
 
     }
 }

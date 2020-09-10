@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using School.Data.Context;
 using School.Data.Models;
 
 namespace School.API.Services
@@ -50,7 +51,7 @@ namespace School.API.Services
                                                  from grade in _context.StudentGrade
                                                  join course in _context.Course on grade.CourseId equals course.CourseId
                                                  where grade.StudentId == student.PersonId && grade.Grade != null
-                                                 select new Grade
+                                                 select new StudentTranscriptGrade
                                                  {
                                                      courseId = grade.CourseId,
                                                      title = course.Title,
@@ -125,7 +126,7 @@ namespace School.API.Services
                 transcript.grades = await (from studentGrade in _context.StudentGrade
                                      join course in _context.Course on studentGrade.CourseId equals course.CourseId
                                      where studentGrade.StudentId == id && studentGrade.Grade != null
-                                     select new Grade
+                                     select new StudentTranscriptGrade
                                      {
                                          courseId = course.CourseId,
                                          title = course.Title,
@@ -237,7 +238,7 @@ namespace School.API.Services
         /// </summary>
         /// <param name="studentGrades">List of Grade objects</param>
         /// <returns>Weighted average GPA</returns>
-        public decimal? CalculateGPA(List<Grade> studentGrades)
+        public decimal? CalculateGPA(List<StudentTranscriptGrade> studentGrades)
         {
             #region Challenge 2.2 Why I used C# rather than Stored Proc for this
 
@@ -274,7 +275,7 @@ namespace School.API.Services
             // These are grades the teacher has not yet recorded for the student and should not
             // weigh against them.
 
-            foreach (Grade courseGrade in studentGrades)
+            foreach (StudentTranscriptGrade courseGrade in studentGrades)
             {
                 if (courseGrade.grade != null)
                 {

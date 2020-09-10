@@ -1,8 +1,9 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using School.Data.Models;
 
-namespace School.Data.Models
+namespace School.Data.Context
 {
     public partial class SchoolContext : DbContext
     {

@@ -17,6 +17,6 @@ namespace School.API.Services
 
         bool CourseExists(int id);
 
-        decimal? CalculateGPA(List<Grade> studentGrades);
+        decimal? CalculateGPA(List<StudentTranscriptGrade> studentGrades);
     }
 }
