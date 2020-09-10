@@ -227,14 +227,14 @@ namespace School.API.Services
                 };
             }
 
+            _log.LogDebug("StudentService.PostGrade: Adding new CourseGrade");
+
             StudentGrade newGrade = new StudentGrade
             {
                 StudentId = courseGrade.studentId,
                 CourseId = courseGrade.courseId,
                 Grade = courseGrade.grade
             };
-
-            _log.LogDebug("StudentService.PostGrade: Adding new CourseGrade");
 
             //
             // This is interesting:  GetRepository lazy load/adds a StudentGrade repository here when requested.
