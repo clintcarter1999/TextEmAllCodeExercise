@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using School.Data.Context;
 using School.Data.Models;
+using School.Data.Repositories;
 
 namespace School.API.Services
 {
@@ -18,12 +19,23 @@ namespace School.API.Services
     public class StudentsService : IStudentsService
     {
         private readonly SchoolContext _context;
+        private readonly IUnitOfWork _uow;
         private readonly ILogger<StudentsService> _log;
         private readonly IMapper _mapper;
 
-        public StudentsService(SchoolContext context, ILogger<StudentsService> logger, IMapper mapper)
+        public StudentsService(SchoolContext context, IUnitOfWork uow, ILogger<StudentsService> logger, IMapper mapper)
         {
+            //
+            // Note: I am rushing to meet a deadline at work and leaving my Code Challenge a bit dirty in this respect:
+            // The goal here is to remove SchoolContext and only have the UnitOfWork as an interface to the context
+            // I'll need to refactor the queries using _context to _uow.GetRepository<T> or other pattern.
+            //
+            // At the moment, _context is only being used for Queries and _uow is used for Create, Update, Delete
+            // 
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _uow = uow ?? throw new ArgumentNullException(nameof(uow));
+
+
             _log = logger ?? throw new ArgumentNullException(nameof(logger));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
@@ -202,9 +214,13 @@ namespace School.API.Services
                 Grade = courseGrade.grade
             };
 
-            _context.StudentGrade.Add(newGrade);
+            _uow.GetRepository<StudentGrade>().Add(newGrade);
+            
+            await Task.Run(() =>_uow.Commit());
 
-            await _context.SaveChangesAsync();
+            //_context.StudentGrade.Add(newGrade);
+
+            //await _context.SaveChangesAsync();
 
             CourseGrade newCourseGrade = _mapper.Map<CourseGrade>(newGrade);
 

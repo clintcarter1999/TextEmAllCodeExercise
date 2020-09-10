@@ -19,6 +19,7 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.IO;
 using School.Data.Context;
+using School.Data.Repositories;
 
 namespace School.API
 {
@@ -41,6 +42,7 @@ namespace School.API
 
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddScoped<IStudentsService, StudentsService>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.AddSwaggerGen(c =>
             {

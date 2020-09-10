@@ -155,7 +155,7 @@ namespace School.API.Controllers
 
             CourseGrade newCourseGrade = response.Item1 as CourseGrade;
 
-            return CreatedAtAction("PostStudentGrade", newCourseGrade);
+            return CreatedAtAction("PostGrade", newCourseGrade);
         }
 
         private bool PersonExists(int id)
