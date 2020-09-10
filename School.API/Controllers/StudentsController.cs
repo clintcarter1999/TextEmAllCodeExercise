@@ -12,6 +12,7 @@ using School.Data.Models;
 using School.API.Utility;
 using Microsoft.Extensions.Logging;
 using School.Data.Context;
+using School.Data;
 
 namespace School.API.Controllers
 {
@@ -45,11 +46,21 @@ namespace School.API.Controllers
         {
             _log.LogInformation("Get:/students called");
 
-            IEnumerable<StudentTranscript> transcripts = await _studentsService.GetAllStudentTranscripts();
+            ServiceResponse<List<StudentTranscript>> response = await _studentsService.GetAllStudentTranscripts();
+
+            if (!response.Success)
+            {
+                return BadRequest(new BadRequestResponse($"{response.Message}"));
+            }
+
+            IEnumerable<StudentTranscript> transcripts = response.Data as IEnumerable<StudentTranscript>;
 
             if (transcripts == null)
             {
-                _log.LogWarning("Get:/students: unable to retrieve student transcripts. Check the Persons table for students");
+                //TODO: Think this over more.  Should I just throw an exception here?
+                //My response object says we had success but returned no data...
+
+                _log.LogWarning("Get:/students: unable to retrieve student transcripts for unknown reason");
 
                 return BadRequest(new BadRequestResponse("Unable to retrieve student transcripts"));
             }
@@ -77,24 +88,22 @@ namespace School.API.Controllers
         [Route("{id}/transcript")]
         public async Task<ActionResult<StudentTranscript>> GetTranscript(int id)
         {
-            _log.LogInformation($"Get:/students/{id}/transcript called");
-
-            bool existingStudent = _studentsService.StudentExists(id);
-
-            if (!existingStudent)
-            {
-                _log.LogWarning($"Get:/students/{id}/transcript: Student does not exist");
-
-                return NotFound(new NotFoundResponse($"Student Id {id} does not exist"));
-            }
-
             _log.LogInformation($"Get:/students/{id}/transcript: Getting Transcript");
 
-            StudentTranscript transcript = await _studentsService.GetTranscript(id);
+            ServiceResponse<StudentTranscript> response = await _studentsService.GetTranscript(id);
+
+            if (!response.Success)
+            {
+                _log.LogWarning($"Get:/students/{id}/transcript: {response.Message??"validation failed"}");
+
+                return NotFound(new NotFoundResponse($"{response.Message ?? "validation failed"}"));
+            }
+
+            StudentTranscript transcript = response.Data as StudentTranscript;
 
             if (transcript == null)
             {
-                _log.LogWarning($"Get:/students/{id}/transcript: The Student Exists but we were unable to build a transcript");
+                _log.LogWarning($"Get:/students/{id}/transcript: The Student Exists but we were unable to build a transcript for unknown reasons");
 
                 return BadRequest(new BadRequestResponse($"Unable to find a student transcript for Student Id {id}"));
             }
@@ -145,15 +154,15 @@ namespace School.API.Controllers
         [Route("grades")]
         public async Task<ActionResult<CourseGrade>> PostGrade(CourseGrade courseGrade)
         {
-            Tuple<CourseGrade, string> response = await _studentsService.PostGrade(courseGrade);
+            ServiceResponse<CourseGrade> response = await _studentsService.PostGrade(courseGrade);
 
-            if (response.Item2 != null)
+            if (!response.Success)
             {
                 // We were unable to create a new StudentGrade record.
-                return BadRequest(new BadRequestResponse(response.Item2));
+                return BadRequest(new BadRequestResponse(response.Message));
             }
 
-            CourseGrade newCourseGrade = response.Item1 as CourseGrade;
+            CourseGrade newCourseGrade = response.Data as CourseGrade;
 
             return CreatedAtAction("PostGrade", newCourseGrade);
         }

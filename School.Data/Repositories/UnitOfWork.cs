@@ -15,13 +15,15 @@ namespace School.Data.Repositories
     /// </summary>
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly SchoolContext _ctx;
         private Dictionary<Type, object> _repositories;
         private bool _disposed;
 
+        public SchoolContext Context { get; set; }
+
         public UnitOfWork(SchoolContext context)
         {
-            _ctx = context;
+            this.Context = context;
+
             _repositories = new Dictionary<Type, object>();
             _disposed = false;
         }
@@ -31,7 +33,7 @@ namespace School.Data.Repositories
             if (_repositories.Keys.Contains(typeof(TEntity)))
                 return _repositories[typeof(TEntity)] as IRepository<TEntity>;
 
-            var repository = new Repository<TEntity>(_ctx);
+            var repository = new Repository<TEntity>(this.Context);
             _repositories.Add(typeof(TEntity), repository);
             return repository;
         }
@@ -48,7 +50,7 @@ namespace School.Data.Repositories
             {
                 if (disposing)
                 {
-                    _ctx.Dispose();
+                    this.Context.Dispose();
                 }
 
                 this._disposed = true;
@@ -57,7 +59,7 @@ namespace School.Data.Repositories
 
         public void Commit()
         {
-            _ctx.SaveChanges();
+            this.Context.SaveChanges();
         }
 
     }

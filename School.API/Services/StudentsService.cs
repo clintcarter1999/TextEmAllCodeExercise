@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using School.Data;
 using School.Data.Context;
 using School.Data.Models;
 using School.Data.Repositories;
@@ -18,24 +19,13 @@ namespace School.API.Services
     /// </summary>
     public class StudentsService : IStudentsService
     {
-        private readonly SchoolContext _context;
         private readonly IUnitOfWork _uow;
         private readonly ILogger<StudentsService> _log;
         private readonly IMapper _mapper;
 
-        public StudentsService(SchoolContext context, IUnitOfWork uow, ILogger<StudentsService> logger, IMapper mapper)
+        public StudentsService(IUnitOfWork uow, ILogger<StudentsService> logger, IMapper mapper)
         {
-            //
-            // Note: I am rushing to meet a deadline at work and leaving my Code Challenge a bit dirty in this respect:
-            // The goal here is to remove SchoolContext and only have the UnitOfWork as an interface to the context
-            // I'll need to refactor the queries using _context to _uow.GetRepository<T> or other pattern.
-            //
-            // At the moment, _context is only being used for Queries and _uow is used for Create, Update, Delete
-            // 
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
-
-
             _log = logger ?? throw new ArgumentNullException(nameof(logger));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
@@ -45,14 +35,22 @@ namespace School.API.Services
         /// take a long time to return results as the number of students grows.
         /// </summary>
         /// <returns>List of StudentTranscript</returns>
-        public async Task<List<StudentTranscript>> GetAllStudentTranscripts()
+        public async Task<ServiceResponse<List<StudentTranscript>>> GetAllStudentTranscripts()
         {
             _log.LogDebug("StudentsService: Getting all student transcripts");
 
+            //
+            // Just making the query a bit more readable than having _uow.Context all over the place
+            // by adding these variables representing each Table in the DB
+            //
+            DbSet<Person> personTable = _uow.Context.Person;
+            DbSet<StudentGrade> studentGradeTable = _uow.Context.StudentGrade;
+            DbSet<Course> courseTable = _uow.Context.Course;
+
             List<StudentTranscript> transcripts = await (
                             (
-                                from student in _context.Person
-                                join courseGrade in _context.StudentGrade on student.PersonId equals courseGrade.StudentId
+                                from student in personTable
+                                join courseGrade in studentGradeTable on student.PersonId equals courseGrade.StudentId
                                 select new StudentTranscript
                                 {
                                     studentId = student.PersonId,
@@ -60,8 +58,8 @@ namespace School.API.Services
                                     lastName = student.LastName,
                                     gpa = 0,
                                     grades = (
-                                                 from grade in _context.StudentGrade
-                                                 join course in _context.Course on grade.CourseId equals course.CourseId
+                                                 from grade in studentGradeTable
+                                                 join course in courseTable on grade.CourseId equals course.CourseId
                                                  where grade.StudentId == student.PersonId && grade.Grade != null
                                                  select new StudentTranscriptGrade
                                                  {
@@ -77,7 +75,13 @@ namespace School.API.Services
             if (transcripts == null)
             {
                 _log.LogWarning("StudentService: No student transcripts found.  Returning null");
-                return null;
+
+                return new ServiceResponse<List<StudentTranscript>>
+                {
+                    Data = null,
+                    Success = false,
+                    Message = "StudentService: No student transcripts found"
+                };
             }
 
             _log.LogDebug($"StudentsService: Calculating GPA for {transcripts.Count} of students");
@@ -97,7 +101,12 @@ namespace School.API.Services
 
             _log.LogDebug($"StudentsService: Returning {transcripts.Count} student transcripts");
 
-            return transcripts;
+            return new ServiceResponse<List<StudentTranscript>>
+            {
+                Data = transcripts,
+                Success = true,
+                Message = "Success"
+            };
         }
 
         /// <summary>
@@ -108,13 +117,29 @@ namespace School.API.Services
         /// </summary>
         /// <param name="id">Student Id</param>
         /// <returns>StudentTranscript (or null if not found).</returns>
-        public async Task<StudentTranscript> GetTranscript(int id)
+        public async Task<ServiceResponse<StudentTranscript>> GetTranscript(int id)
         {
-            _log.LogDebug($"StudentsService: Getting transcript for studentId = {id}");
+            _log.LogDebug("StudentService.GetTranscript START");
+
+            if (!StudentExists(id))
+            {
+                string errorMessage = $"Get:/students/{id}/transcript: Student does not exist";
+
+                return new ServiceResponse<StudentTranscript>
+                {
+                    Data = null,
+                    Success = false,
+                    Message = errorMessage
+                };
+            }
+
+            DbSet<Person> personTable = _uow.Context.Person;
+            DbSet<StudentGrade> studentGradeTable = _uow.Context.StudentGrade;
+            DbSet<Course> courseTable = _uow.Context.Course;
 
             var query = await (  
-                                from student in _context.Person
-                                join studentGrade in _context.StudentGrade on student.PersonId equals studentGrade.StudentId
+                                from student in personTable
+                                join studentGrade in studentGradeTable on student.PersonId equals studentGrade.StudentId
                                 where student.PersonId == id
                                 select new StudentTranscript
                                 {
@@ -135,8 +160,8 @@ namespace School.API.Services
                 //
                 // Generate the Grades List for this student which is needed to calculate the GPA below.
                 //
-                transcript.grades = await (from studentGrade in _context.StudentGrade
-                                     join course in _context.Course on studentGrade.CourseId equals course.CourseId
+                transcript.grades = await (from studentGrade in studentGradeTable
+                                     join course in courseTable on studentGrade.CourseId equals course.CourseId
                                      where studentGrade.StudentId == id && studentGrade.Grade != null
                                      select new StudentTranscriptGrade
                                      {
@@ -149,33 +174,107 @@ namespace School.API.Services
                 _log.LogDebug($"StudentsService: Calculating GPA for this student");
 
                 //
-                // See massive comment in CalculateGPA for Challenge 2.2
+                // See massive comment regarding the method for calculating the GPA for Challenge 2.2
                 //
                 transcript.gpa = CalculateGPA(transcript.grades);
 
                 _log.LogDebug($"StudentsService: Returning transcript for studentId = {id}");
 
-                return transcript;
+                _log.LogDebug("StudentService.GetTranscript END 1");
+
+                return new ServiceResponse<StudentTranscript>
+                {
+                    Data = transcript,
+                    Success = true
+                };
             }
 
+            //TODO: Rethink returning a null like this.
+            // Perhaps return
+            _log.LogError("StudentService.GetTranscript returning null - Perhaps this should be an exception??");
 
-            return null;
+            return new ServiceResponse<StudentTranscript>
+            {
+                Data = null,
+                Success = false,
+                Message = "Unable to gather a transcript for unknown reason"
+            }; 
         }
 
-        public async Task<Tuple<CourseGrade, string>> PostGrade(CourseGrade courseGrade)
+        /// <summary>
+        /// PostGrade creates a new Course grade for a given student.
+        /// </summary>
+        /// <param name="courseGrade"></param>
+        /// <returns>A Tuple containing CourseGrade and a error message string</returns>
+        public async Task<ServiceResponse<CourseGrade>> PostGrade(CourseGrade courseGrade)
         {
-            string errorMessage = null;
+            _log.LogDebug("StudentService.PostGrade called");
+
+            string errorMessage = string.Empty;
+
+            if (!ValidateCourseGrade(courseGrade, ref errorMessage))
+            {
+                _log.LogError($"StudentService.PostGrade: {errorMessage??"Validation Error"}");
+
+                //
+                // Validation failed. There was a validation issue preventing this post.
+                //
+                return new ServiceResponse<CourseGrade>
+                {
+                    Success = false,
+                    Message = errorMessage,
+                    Data = courseGrade // returning the value passed into us
+                };
+            }
+
+            StudentGrade newGrade = new StudentGrade
+            {
+                StudentId = courseGrade.studentId,
+                CourseId = courseGrade.courseId,
+                Grade = courseGrade.grade
+            };
+
+            _log.LogDebug("StudentService.PostGrade: Adding new CourseGrade");
+
+            //
+            // This is interesting:  GetRepository lazy load/adds a StudentGrade repository here when requested.
+            // This is something new I am playing with in this code challenge.
+            _uow.GetRepository<StudentGrade>().Add(newGrade);
+
+            await Task.Run(() => _uow.Commit());
+
+            CourseGrade newCourseGrade = _mapper.Map<CourseGrade>(newGrade);
+
+            _log.LogDebug($"StudentService.PostGrade: CourseGrade.gradeId = {newCourseGrade.gradeId} Added Successfully ");
+
+            return new ServiceResponse<CourseGrade>
+            {
+                Success = true,
+                Message = errorMessage,
+                Data = newCourseGrade
+            };
+        }
+
+        private bool ValidateCourseGrade(CourseGrade courseGrade, ref string errorMessage)
+        {
+            _log.LogDebug("StudentService.ValidateCourseGrade called");
 
             if (!StudentExists(courseGrade.studentId))
             {
-                errorMessage = $"Student Id = {courseGrade.studentId} does not exist\r\n";
-                return new Tuple<CourseGrade, string>(null, errorMessage);
+                errorMessage = $"Student Id = {courseGrade.studentId} does not exist";
+
+                _log.LogDebug($"StudentService.Validation: {errorMessage}");
+
+                return false;
             }
 
             if (!CourseExists(courseGrade.courseId))
             {
-                errorMessage += $"Course Id = {courseGrade.courseId} does not exist\r\n";
-                return new Tuple<CourseGrade, string>(null, errorMessage);
+                errorMessage += $"Course Id = {courseGrade.courseId} does not exist";
+
+                _log.LogDebug($"StudentService.Validation: {errorMessage}");
+
+                return false;
             }
 
             //
@@ -192,39 +291,28 @@ namespace School.API.Services
                 if (!validRange)
                 {
                     errorMessage = $"Invalid Grade Value {courseGrade.grade}: A value of null or between 0 and 4 is required.\r\n";
-                    return new Tuple<CourseGrade, string>(null, errorMessage);
+
+                    _log.LogDebug($"StudentService.Validation: {errorMessage}");
+
+                    return false;
                 }
             }
 
             //
             // We cannot have more than one grade per course per student.  
             //
-            var existingGrade = _context.StudentGrade.Where(e => e.CourseId == courseGrade.courseId && e.StudentId == courseGrade.studentId).FirstOrDefault();
+            var existingGrade = _uow.Context.StudentGrade.Where(e => e.CourseId == courseGrade.courseId && e.StudentId == courseGrade.studentId).FirstOrDefault();
 
             if (existingGrade != null)
             {
                 errorMessage = $"The student already has a grade entered for CourseId = {courseGrade.courseId}.  Did you meant to use PUT/Update?";
-                return new Tuple<CourseGrade, string>(null, errorMessage);
+
+                _log.LogDebug($"StudentService.Validation: {errorMessage}");
+
+                return false;
             }
 
-            StudentGrade newGrade = new StudentGrade
-            {
-                StudentId = courseGrade.studentId,
-                CourseId = courseGrade.courseId,
-                Grade = courseGrade.grade
-            };
-
-            _uow.GetRepository<StudentGrade>().Add(newGrade);
-            
-            await Task.Run(() =>_uow.Commit());
-
-            //_context.StudentGrade.Add(newGrade);
-
-            //await _context.SaveChangesAsync();
-
-            CourseGrade newCourseGrade = _mapper.Map<CourseGrade>(newGrade);
-
-            return new Tuple<CourseGrade, string>(newCourseGrade, errorMessage);
+            return true;
         }
 
         /// <summary>
@@ -235,7 +323,7 @@ namespace School.API.Services
         /// <returns>True if the student exists with the given id, false if no student with the given Id exists</returns>
         public bool StudentExists(int id)
         {
-            return _context.Person.Any(e => e.PersonId == id && e.Discriminator.ToLower() == "student");
+            return _uow.Context.Person.Any(e => e.PersonId == id && e.Discriminator.ToLower() == "student");
         }
 
         /// <summary>
@@ -245,7 +333,7 @@ namespace School.API.Services
         /// <returns>True if the Course exists with the given id, false if no Course with the given Id exists</returns>
         public bool CourseExists(int id)
         {
-            return _context.Course.Any(e => e.CourseId == id);
+            return _uow.Context.Course.Any(e => e.CourseId == id);
         }
 
         /// <summary>
@@ -256,6 +344,9 @@ namespace School.API.Services
         /// <returns>Weighted average GPA</returns>
         public decimal? CalculateGPA(List<StudentTranscriptGrade> studentGrades)
         {
+            // NOTE: The lack of logging here is because this can get called thousands of times for each query.
+            // It would bloat the log.
+
             #region Challenge 2.2 Why I used C# rather than Stored Proc for this
 
             //
