@@ -20,6 +20,7 @@ using System.Reflection;
 using System.IO;
 using School.Data.Context;
 using School.Data.Repositories;
+using School.API.Extensions;
 
 namespace School.API
 {
@@ -44,36 +45,7 @@ namespace School.API
             services.AddScoped<IStudentsService, StudentsService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Version = "v1",
-                    Title = "Text-Em-All School Web API",
-                    Description = "Text-Em-All Back End Coding Challenge Designed by Jeff Ogata",
-                    
-                    TermsOfService = new Uri("https://github.com/callemall/tea-c-sharp-challenge"),
-                    Contact = new OpenApiContact
-                    {
-                        Name = "Clint Carter",
-                        Email = "clint@goldencreekrc.com",
-                        Url = new Uri("http://github.com/clintcarter1999/"),
-                    },
-                    License = new OpenApiLicense
-                    {
-                        Name = "Use under LICX provided by Text-Em-All's Jeff Ogata",
-                        Url = new Uri("https://github.com/callemall/tea-c-sharp-challenge"),
-                    }
-                });
-
-                // Set the comments path for the Swagger JSON and UI.
-                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                c.IncludeXmlComments(xmlPath);
-            });
-
-
-
+            services.AddSwagger();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

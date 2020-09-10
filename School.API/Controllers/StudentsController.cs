@@ -19,25 +19,24 @@ namespace School.API.Controllers
     [ApiController]
     public class StudentsController : ControllerBase
     {
-        private readonly SchoolContext _context;
         private readonly ILogger<StudentsController> _log;
         private readonly IStudentsService _studentsService;
         private readonly IMapper _mapper;
 
-        public StudentsController(SchoolContext context, ILogger<StudentsController> logger, IStudentsService studentsService, IMapper mapper)
+        public StudentsController(ILogger<StudentsController> logger, IStudentsService studentsService, IMapper mapper)
         {
-            _context = context ?? throw new ArgumentNullException(nameof(context)); ;
             _log = logger ?? throw new ArgumentNullException(nameof(logger));
             _studentsService = studentsService ?? throw new ArgumentNullException(nameof(studentsService));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
 
+
         /// GET: /students
         /// 
         /// <summary>
-        /// Challenge 2: 
+        /// Challenge 2: Add an endpoint to return a list of students and their GPAs.
         /// 
-        /// Get a list of all students providing a subset of information including:
+        /// Returns a list of all students providing a subset of information including:
         /// studentId, firstName, lastName, GPA
         /// </summary>
         /// <returns>IEnumerable of StudentGPA</returns>
@@ -60,7 +59,7 @@ namespace School.API.Controllers
             // Map to a DTO object for the consumer
             List<StudentGPA> students = _mapper.Map<List<StudentGPA>>(transcripts);
 
-            _log.LogInformation($"Get:/students: Returning {students?.Count} Students"); 
+            _log.LogInformation($"Get:/students: Returning {students?.Count} Students");
 
             return Ok(students);
         }
@@ -105,38 +104,39 @@ namespace School.API.Controllers
             return Ok(transcript);
         }
 
-        /// GET: /students/alltranscripts
-        /// 
-        /// <summary>
-        /// Gets the entire transcript of all students.  This was not part of the Challenge.
-        /// I will likely turn this into a paging mechanism.
-        /// </summary>
-        /// <returns>IEnumerable of StudentTranscript</returns>
-        [HttpGet]
-        [Route("alltranscripts")]
-        public async Task<ActionResult<IEnumerable<StudentTranscript>>> GetAllTranscripts()
-        {
-            _log.LogInformation($"Get:/students/alltranscripts: Getting all student transcripts");
+        ///// GET: /students/alltranscripts
+        ///// 
+        ///// <summary>
+        ///// Gets the entire transcript of all students.  This was not part of the Challenge.
+        ///// I will likely turn this into a paging mechanism.
+        ///// </summary>
+        ///// <returns>IEnumerable of StudentTranscript</returns>
+        //[HttpGet]
+        //[Route("alltranscripts")]
+        //public async Task<ActionResult<IEnumerable<StudentTranscript>>> GetAllTranscripts()
+        //{
+        //    _log.LogInformation($"Get:/students/alltranscripts: Getting all student transcripts");
 
-            IEnumerable<StudentTranscript> transcripts = await _studentsService.GetAllStudentTranscripts();
+        //    IEnumerable<StudentTranscript> transcripts = await _studentsService.GetAllStudentTranscripts();
 
-            if (transcripts == null)
-            {
-                _log.LogWarning($"Get:/students/alltranscripts: We were unable to get any student transcripts!");
+        //    if (transcripts == null)
+        //    {
+        //        _log.LogWarning($"Get:/students/alltranscripts: We were unable to get any student transcripts!");
 
-                return BadRequest(new BadRequestResponse("Unable to find any student transcripts"));
-            }
+        //        return BadRequest(new BadRequestResponse("Unable to find any student transcripts"));
+        //    }
 
-            _log.LogInformation($"Get:/students/alltranscripts: Returning {transcripts.Count()} student transcripts");
+        //    _log.LogInformation($"Get:/students/alltranscripts: Returning {transcripts.Count()} student transcripts");
 
-            return Ok(transcripts);
-        }
+        //    return Ok(transcripts);
+        //}
+
 
         ///
         /// POST: students/grades
         /// 
         /// <summary>
-        /// Creates a new StudentGrade record for a given student and course.
+        /// Challenge 4: Add an endpoint to insert a student grade.
         /// Does not allow posting multiple grades for the same course and student.
         /// </summary>
         /// <param name="courseGrade">CourseGrade</param>
@@ -156,16 +156,6 @@ namespace School.API.Controllers
             CourseGrade newCourseGrade = response.Item1 as CourseGrade;
 
             return CreatedAtAction("PostGrade", newCourseGrade);
-        }
-
-        private bool PersonExists(int id)
-        {
-            return _context.Person.Any(e => e.PersonId == id);
-        }
-
-        private bool CourseExists(int id)
-        {
-            return _context.Course.Any(e => e.CourseId == id);
         }
     }
 }

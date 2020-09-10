@@ -203,7 +203,7 @@ namespace School.API.Services
 
             if (existingGrade != null)
             {
-                errorMessage = $"The student already has a grade entered.  You will need to use a PUT action rather than a POST";
+                errorMessage = $"The student already has a grade entered for CourseId = {courseGrade.courseId}.  Did you meant to use PUT/Update?";
                 return new Tuple<CourseGrade, string>(null, errorMessage);
             }
 
