@@ -1,0 +1,9 @@
+-- Challenge 3 Add Constraints to an existing database in use
+
+-- If not NULL, Grade must be a value between 0.00 and 4.00 inclusive.
+
+ALTER TABLE StudentGrade ADD CONSTRAINT check_gpa_range CHECK (grade BETWEEN 0.00 AND 4.00);
+
+-- The combination of CourseID and StudentID must be unique.
+
+ALTER TABLE StudentGrade ADD CONSTRAINT courseId_studentId_unique UNIQUE (CourseID, StudentID)

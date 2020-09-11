@@ -15,7 +15,7 @@ namespace School.Data.Models
         [Required]
         public int courseId { get; set; }
 
-        [Required, Range(0, 4)]
+        [Range(0, 4)]
         public decimal? grade { get; set; }
     }
 }
