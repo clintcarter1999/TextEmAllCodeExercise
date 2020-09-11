@@ -1,7 +1,6 @@
 # # Text-Em-All Back End Coding Challenge Submission
 
-This is a coding challenge provided by [Text-Em-All](https://www.text-em-all.com/) 
-I found the challenge fun.   
+This is a coding challenge provided by [Text-Em-All](https://www.text-em-all.com/).
 
 The original challenge was provided here:  https://github.com/callemall/tea-c-sharp-challenge
 
