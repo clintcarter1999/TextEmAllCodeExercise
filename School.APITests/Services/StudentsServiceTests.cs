@@ -1,21 +1,23 @@
-﻿using Xunit;
-using School.API.Services;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Moq;
-using School.Data.Repositories;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
-using School.API.Controllers;
-using School.Data;
-using School.Data.Models;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using School.API.Profiles;
 
-namespace School.API.Services.Tests
+using AutoMapper;
+using Xunit;
+using Moq;
+
+using School.API.Controllers;
+using School.API.Profiles;
+using School.API.Services;
+using School.Data;
+using School.Data.Models;
+using School.Data.Repositories;
+
+namespace School.API.Tests
 {
     public class StudentsServiceTests
     {
@@ -44,10 +46,10 @@ namespace School.API.Services.Tests
         }
 
         [Fact()]
-        public async Task GetStudents_Success_Test()
+        public async Task StudentsService_GetAllStudentTranscripts()
         {
             // Arrange
-            _mockStudentsService.Setup(service => service.GetAllStudentTranscripts()).Returns(Task.Run(() => CreateTranscripts()));
+            _mockStudentsService.Setup(service => service.GetAllStudentTranscripts()).Returns(Task.Run(() => StudentsServiceTests.CreateTranscripts()));
 
             // Act
             var result = await _controller.GetStudents() as ActionResult<IEnumerable<StudentGPA>>;
@@ -60,48 +62,7 @@ namespace School.API.Services.Tests
             Assert.True(students.Count == 1);
         }
 
-        [Fact()]
-        public async Task GetExistingStudentTranscript_Success()
-        {
-            int id = 2;
-
-            // Arrange
-            _mockStudentsService.Setup(service => service.GetTranscript(id)).Returns(Task.Run(() => CreateTranscript(id)));
-            _mockStudentsService.Setup(service => service.StudentExists(id)).Returns(true);
-
-            // Act
-            var result = await _controller.GetTranscript(id) as ActionResult<StudentTranscript>;
-            StudentTranscript student = result.Value as StudentTranscript;
-
-            // Assert
-            Debug.Print("Stop here");
-            Assert.IsType<OkObjectResult>(result);
-            Assert.True(student != null);
-            Assert.True(student.studentId == id);
-        }
-
-        [Fact()]
-        public async Task GetStudentTranscript_StudentDoesNotExist()
-        {
-            int id = 2;
-
-            // Arrange
-            //TODO: This is obviously wrong
-            _mockStudentsService.Setup(service => service.StudentExists(id)).Returns(false);
-            _mockStudentsService.Setup(service => service.GetTranscript(id)).Returns(Task.Run(() => CreateTranscript(id)));
-
-            // Act
-            var result = await _controller.GetTranscript(id) as ActionResult<StudentTranscript>;
-            StudentTranscript student = result.Value as StudentTranscript;
-
-            // Assert
-            Debug.Print("Stop here");
-            Assert.IsType<OkObjectResult>(result);
-            Assert.True(student != null);
-            Assert.True(student.studentId == id);
-        }
-
-        private ServiceResponse<StudentTranscript> CreateTranscript(int id)
+        public static ServiceResponse<StudentTranscript> CreateTranscript(int id)
         {
             ServiceResponse<StudentTranscript> response =  new ServiceResponse<StudentTranscript>
             {
@@ -129,7 +90,7 @@ namespace School.API.Services.Tests
             return response;
         }
 
-        private ServiceResponse<List<StudentTranscript>> CreateTranscripts()
+        public static ServiceResponse<List<StudentTranscript>> CreateTranscripts()
         {
             ServiceResponse<List<StudentTranscript>> response = new ServiceResponse<List<StudentTranscript>>
             {
